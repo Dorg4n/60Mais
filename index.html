@@ -1,0 +1,1693 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Fundação Banrisul - Voice Auth</title>
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <style>
+        /* --- IMPORTAÇÃO DA FONTE (Simulada) --- */
+        @font-face {
+            font-family: 'Lufga';
+            src: url('Lufga-SemiBold.otf') format('opentype');
+            font-weight: 600;
+            font-style: normal;
+        }
+
+        /* --- RESET GERAL --- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body, html {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            position: fixed;
+            background-color: #000;
+        }
+
+        /* --- CONTAINER PRINCIPAL --- */
+        .app-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            background-image: url('BG.png'); 
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            flex-direction: column;
+            z-index: 0;
+        }
+
+        /* --- CONTEÚDO BASE --- */
+        .content {
+            position: relative;
+            z-index: 2;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 2rem;
+            color: white;
+            overflow: hidden;
+        }
+
+        /* --- HEADER --- */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 2rem;
+            padding-top: 1rem;
+            transition: opacity 0.3s;
+        }
+
+        .logo-container {
+            max-width: 200px; 
+            width: 100%;
+            height: auto;
+        }
+        
+        .logo-container img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .help-icon {
+            font-size: 1.5rem;
+            border: 2px solid white;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        /* --- TEXTOS PRINCIPAIS --- */
+        .main-text {
+            margin-top: auto;
+            margin-bottom: 2rem;
+            transition: all 0.5s ease;
+        }
+
+        h1 {
+            font-family: 'Lufga', sans-serif;
+            font-weight: 600;
+            font-size: clamp(2rem, 5vw, 2.5rem);
+            line-height: 1.2;
+        }
+
+        .highlight-box {
+            background-color: #8c52ff;
+            padding: 2px 6px;
+            display: inline-block;
+            border-radius: 0 px;
+            font-family: inherit; 
+            font-weight: inherit;
+            color: white;
+        }
+
+        /* --- FRAMES/TELAS --- */
+        .screen {
+            width: 100%;
+            backface-visibility: hidden;
+            position: relative;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Tela Inicial */
+        #screen-initial {
+            margin-bottom: 25vh; 
+            transition: opacity 0.4s ease;
+        }
+
+        /* Tela de Formulário Login */
+        #screen-login {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            padding-bottom: 3rem;
+        }
+
+        /* --- ESTILOS DE FORMULÁRIO --- */
+        .input-group { display: flex; flex-direction: column; transition: all 0.3s ease; }
+        .input-group label { font-size: 1rem; font-weight: 600; margin-bottom: 0.5rem; letter-spacing: 0.5px; }
+
+        .input-wrapper {
+            position: relative; width: 100%; display: flex; align-items: center;
+        }
+
+        .input-group input {
+            background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.7);
+            color: white; padding: 0.5rem 0; font-size: 1.1rem; outline: none;
+            transition: border-color 0.3s; border-radius: 0; width: 100%;
+        }
+        
+        #senha { padding-right: 35px; }
+        .input-group input:focus { border-bottom: 2px solid #8c52ff; }
+        .input-group input::placeholder { color: rgba(255, 255, 255, 0.5); font-weight: 400; }
+
+        .eye-icon {
+            position: absolute; right: 0; bottom: 8px; cursor: pointer;
+            width: 24px; height: 24px; fill: rgba(255, 255, 255, 0.7); transition: fill 0.3s;
+        }
+        .eye-icon:hover { fill: white; }
+
+        /* Container que alinha as opções */
+        .options-row {
+            display: flex; 
+            align-items: center; 
+            justify-content: flex-end; 
+            width: 100%;
+            margin-top: 0.5rem;
+        }
+
+        /* Wrapper Genérico para Texto + Switch */
+        .toggle-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95rem;
+            cursor: pointer;
+        }
+
+        .remember-label-text {
+            color: white;
+            font-weight: 400;
+        }
+
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: transparent; border: 2px solid rgba(255,255,255,0.7);
+            transition: .3s; border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 16px; width: 16px; left: 2px; bottom: 2.5px;
+            background-color: white; transition: .3s; border-radius: 50%;
+        }
+        input:checked + .slider { background-color: rgba(140, 82, 255, 0.3); border-color: #8c52ff; }
+        input:checked + .slider:before { transform: translateX(20px); background-color: #8c52ff; }
+
+        /* Botões */
+        .btn-white {
+            background-color: white; color: #1e1c58; border: none; width: 100%; padding: 1.1rem;
+            border-radius: 50px; font-size: 1.1rem; font-family: 'Lufga', sans-serif; font-weight: 600;
+            cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.2); transition: transform 0.1s;
+        }
+        .btn-white:active { transform: scale(0.98); }
+
+        .btn-glass {
+            background-color: rgba(255, 255, 255, 0.9); color: #1e1c58; border: none; width: 100%;
+            padding: 1.1rem; border-radius: 50px; font-size: 1.1rem; font-family: 'Lufga', sans-serif;
+            font-weight: 600; cursor: pointer; margin-top: 1rem; transition: all 0.3s ease;
+        }
+        .btn-glass:disabled {
+            background-color: rgba(255, 255, 255, 0.3); color: rgba(255, 255, 255, 0.5); cursor: not-allowed;
+        }
+
+        .forgot-pass {
+            text-align: center; color: white; text-decoration: none; font-size: 0.95rem;
+            margin-top: 1rem; cursor: pointer; opacity: 0.9;
+        }
+
+        /* --- TELA DE SEGUNDO ACESSO (VOZ) --- */
+        #screen-second-access {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            z-index: 50; 
+            padding: 2rem;
+            background: rgba(18, 16, 60, 0.4); 
+            backdrop-filter: blur(5px);
+        }
+
+        .voice-instruction {
+            font-family: 'Lufga', sans-serif;
+            font-weight: 600;
+            font-size: 1.4rem;
+            line-height: 1.4;
+            margin-bottom: 2rem;
+            margin-top: 2rem;
+            color: white;
+        }
+
+        .big-mic-button {
+            width: 150px;
+            height: 150px;
+            background-color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 2rem;
+            cursor: pointer;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .big-mic-button:active {
+            transform: scale(0.95);
+        }
+
+        .big-mic-button.listening {
+            animation: pulse-white 1.5s infinite;
+        }
+        
+        .big-mic-icon {
+            width: 60px;
+            height: 70px;
+            fill: #1e1c58;
+        }
+
+        /* MENSAGEM DE ERRO NA TELA DE VOZ */
+        .error-msg {
+            color: #ff4d4d;
+            font-weight: 600;
+            min-height: 1.5rem;
+            margin-bottom: 2rem;
+            font-size: 1rem;
+            font-family: 'Lufga', sans-serif;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .btn-voltar-center {
+            margin-top: -100px;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+
+        /* --- TELAS DE FUNDO BRANCO --- */
+        .white-bg-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: white;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            color: #0b0c2b;
+            font-family: 'Lufga', sans-serif;
+            font-weight: 600;
+            transform: translateX(100%);
+            transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        #screen-onboarding { z-index: 10; }
+        #screen-choice { z-index: 15; }
+        #screen-voice-record { z-index: 20; }
+        
+        /* Z-index das telas de biometria facial */
+        #screen-face-biometry { z-index: 25; }
+        #screen-face-camera { z-index: 26; background-color: white; }
+        
+        /* NOVA TELA DE VERIFICAÇÃO */
+        #screen-face-verification { z-index: 55; background-color: white; }
+
+        #screen-voice-result { z-index: 30; }
+        #screen-voice-success { z-index: 40; } 
+        #screen-welcome { z-index: 60; text-align: center; justify-content: center;}
+
+        .header-white {
+            width: 100%; display: flex; justify-content: center; margin-bottom: 2rem; margin-top: 1rem;
+        }
+        .logo-white { width: 220px; height: auto; }
+
+        .back-btn-container {
+            width: 100%; display: flex; justify-content: center; margin-bottom: 1rem; margin-top: 50px;
+        }
+        .btn-back {
+            background: none; border: none; font-size: 1.1rem; font-weight: 600; color: #0b0c2b;
+            cursor: pointer; display: flex; align-items: center; gap: 8px; font-family: 'Lufga', sans-serif;
+        }
+        .arrow-icon-back { width: 14px; height: auto; display: block; }
+
+        .title-onboarding {
+            margin-top:30px; font-weight: 700; font-size: 1.6rem;
+            text-align: center; color: #0b0c2b; margin-bottom: 3rem; line-height: 1.3;
+        }
+        
+        .highlight-purple {
+            background-color: #8c52ff; color: white; padding: 1px 6px; border-radius: 0 px; display: inline-block;
+        }
+
+        .btn-dark-blue {
+            background-color: #010555; color: white; border: none; width: 100%; padding: 1.1rem;
+            border-radius: 50px; font-size: 1rem; font-family: 'Lufga', sans-serif; font-weight: 600;
+            cursor: pointer; margin-bottom: 1rem;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            transition: background-color 0.3s;
+        }
+
+        .btn-dark-blue:disabled {
+            background-color: #cfcfcf;
+            cursor: not-allowed;
+        }
+
+        .btn-dark-blue.recording {
+            background-color: #cc0000;
+            animation: pulse 1.5s infinite;
+        }
+        
+        .btn-light-gray {
+            background-color: #cfcfcf; color: white; border: none; width: 100%; padding: 1.1rem;
+            border-radius: 50px; font-size: 1rem; font-family: 'Lufga', sans-serif; font-weight: 600;
+            cursor: pointer; margin-bottom: 2rem;
+        }
+        
+        /* Botão Roxo Claro (Inverter Câmera) */
+        .btn-purple-light {
+             background-color: #6a75ca; color: white; border: none; width: 100%; padding: 1.1rem;
+            border-radius: 50px; font-size: 1rem; font-family: 'Lufga', sans-serif; font-weight: 600;
+            cursor: pointer; margin-bottom: 1rem;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            transition: transform 0.2s;
+        }
+        .btn-purple-light:active { transform: scale(0.98); }
+
+        .checkbox-container {
+            display: flex; align-items: center; gap: 10px; font-size: 0.95rem; 
+            color: #0b0c2b; font-weight: 600; margin-bottom: 4rem;
+            cursor: pointer;
+        }
+        .checkbox-container input { display: none; }
+        .checkmark {
+            width: 24px; height: 22px; background-color: #0b0c2b;
+            clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+            display: flex; align-items: center; justify-content: center; transition: background-color 0.2s;
+        }
+        .checkmark::before {
+            content: ""; width: 20px; height: 20px; background-color: white;
+            clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+            transition: background-color 0.2s;
+        }
+        .checkbox-container input:checked + .checkmark::before { background-color: #0b0c2b; }
+
+        .footer-link {
+            text-decoration: underline; color: #999; font-weight: 600; font-size: 0.9rem; cursor: pointer; margin-top: auto; padding-bottom: 2rem;
+        }
+
+        /* --- ELEMENTOS DA TELA DE RESULTADO --- */
+        .transcription-card {
+            width: 100%;
+            background-color: #F0F0F5;
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .transcription-label {
+            font-size: 0.8rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.5rem;
+        }
+
+        .transcription-text {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #010555;
+            font-style: italic;
+        }
+
+        .player-container {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 3rem;
+            background: white;
+            border: 1px solid #eee;
+            padding: 15px;
+            border-radius: 50px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        .play-btn-circle {
+            width: 45px;
+            height: 45px;
+            background-color: #8c52ff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .play-icon { width: 16px; height: 16px; margin-left: 2px; }
+
+        .audio-waveform {
+            flex-grow: 1;
+            height: 4px;
+            background-color: #ddd;
+            border-radius: 2px;
+            position: relative;
+        }
+
+        .audio-progress {
+            width: 0%; 
+            height: 100%;
+            background-color: #8c52ff;
+            border-radius: 2px;
+            position: relative;
+            transition: width 0.1s linear;
+        }
+        
+        .audio-progress::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 10px;
+            height: 10px;
+            background-color: #8c52ff;
+            border-radius: 50%;
+            box-shadow: 0 0 0 4px rgba(140, 82, 255, 0.2);
+            opacity: 0;
+        }
+        .audio-progress[style*="width"]::after { opacity: 1; }
+
+        .audio-time {
+            font-size: 0.8rem;
+            color: #666;
+            font-family: monospace;
+            min-width: 40px;
+            text-align: right;
+        }
+
+        /* --- ESTILOS DA TELA DE SUCESSO --- */
+        .success-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex-grow: 1;
+            width: 100%;
+            text-align: center;
+            padding-bottom: 4rem; 
+        }
+
+        .success-image-placeholder {
+            width: 200px;
+            height: 200px;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .success-title {
+            color: #1e1c58;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .success-subtitle {
+            color: #999;
+            font-size: 1rem;
+            margin-bottom: 3rem;
+            line-height: 1.4;
+        }
+
+        .btn-teal {
+            background-color: #5ce1e6; 
+            color: #1e1c58;
+            border: none;
+            width: 100%;
+            max-width: 300px;
+            padding: 1.1rem;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-family: 'Lufga', sans-serif;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(92, 225, 230, 0.3);
+            transition: transform 0.2s;
+        }
+        .btn-teal:active { transform: scale(0.98); }
+
+
+        /* --- ESTILOS ESPECÍFICOS PARA TELA DE BIOMETRIA FACIAL --- */
+        .biometry-title-box {
+            background-color: #8c52ff;
+            color: white;
+            padding: 8px 25px;
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-top: 4rem;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .instruction-item {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 2.5rem;
+        }
+
+        .icon-space {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1.5rem;
+            flex-shrink: 0;
+            border: none; 
+        }
+
+        .icon-space img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .instruction-text {
+            color: #0b0c2b;
+            font-weight: 700;
+            font-size: 1rem;
+            line-height: 1.3;
+            text-align: left;
+        }
+        
+        /* ESTILOS DA CÂMERA DE BIOMETRIA */
+        .camera-wrapper {
+            flex-grow: 1;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+        
+        .video-mask {
+            width: 80vw;
+            height: 80vw;
+            max-width: 350px;
+            max-height: 350px;
+            border-radius: 50%;
+            overflow: hidden;
+            position: relative;
+            z-index: 5;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            background: #000;
+        }
+        
+        /* Estados da borda do vídeo */
+        .border-red {
+            border: 6px solid #ff4d4d;
+            box-shadow: 0 0 20px rgba(255, 77, 77, 0.3);
+        }
+        
+        .border-green {
+            border: 6px solid #70cf24; /* Verde Vibrante */
+            box-shadow: 0 0 20px rgba(112, 207, 36, 0.4);
+        }
+        
+        .border-processing {
+             border: 6px solid #8c52ff;
+             animation: pulse 1.5s infinite;
+        }
+        
+        video#camera-feed, video#camera-feed-verify {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1); /* Espelhar câmera frontal */
+        }
+        
+        .scan-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, transparent 50%, rgba(0,0,0,0.1) 100%);
+            pointer-events: none;
+        }
+
+        /* Animações */
+        .animate-up {
+            animation: slideUp 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
+
+        .screen-visible { transform: translateX(0) !important; }
+        .screen-exit-right { transform: translateX(100%) !important; }
+
+        @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(204, 0, 0, 0.7); }
+            70% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(204, 0, 0, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(204, 0, 0, 0); }
+        }
+
+        @keyframes pulse-white {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
+            70% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(255, 255, 255, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+        }
+
+        .login-fade-out { transform: translateX(-20%); opacity: 0.5; transition: all 0.5s ease; }
+        .login-fade-in { transform: translateX(0); opacity: 1; transition: all 0.5s ease; }
+
+        @media (max-height: 600px) {
+            #screen-initial { margin-bottom: 15vh; }
+            header { margin-bottom: 1rem; }
+            h1 { font-size: 1.8rem; }
+            .title-onboarding { font-size: 1.3rem; margin-bottom: 1.5rem; }
+            .white-bg-screen { padding: 1rem; }
+            .btn-voltar-center { margin-top: -50px; }
+            .big-mic-button { width: 120px; height: 120px; }
+            .video-mask { width: 60vw; height: 60vw; }
+        }
+    </style>
+</head>
+<body>
+
+    <audio id="audio-playback" style="display:none;"></audio>
+
+    <div class="app-container">
+        <div class="overlay"></div>
+        
+        <div class="content">
+            
+            <header id="header-login">
+                <div class="logo-container">
+                    <img src="logo.png" alt="Logo Fundação Banrisul">
+                </div>
+                <div class="help-icon">?</div>
+            </header>
+
+            <div id="screen-second-access" class="screen hidden">
+                
+                <button class="btn-voltar-center" onclick="switchToTypePassword()">
+                    <svg width="10" height="16" viewBox="0 0 14 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M11.5 2L2.5 11L11.5 20" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Voltar
+                </button>
+
+                <div class="voice-instruction">
+                    Clique no ícone e fale a<br>senha por voz
+                </div>
+
+                <div class="big-mic-button" id="btn-mic-auth" onclick="startAuthRecording()">
+                    <svg class="big-mic-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 14C13.66 14 15 12.66 15 11V5C15 3.34 13.66 2 12 2C10.34 2 9 3.34 9 5V11C9 12.66 10.34 14 12 14Z"/>
+                        <path d="M19 11C19 14.53 16.39 17.44 13 17.93V21H11V17.93C7.61 17.44 5 14.53 5 11H7C7 13.76 9.24 16 12 16C14.76 16 17 13.76 17 11H19Z"/>
+                    </svg>
+                </div>
+
+                <div id="voice-error-msg" class="error-msg"></div>
+
+            </div>
+
+            <div class="main-text" id="main-text-login">
+                <h1>Uma nova<br>
+                <span class="highlight-box">Experiência</span><br>
+                para você.</h1>
+            </div>
+
+            <div id="screen-initial" class="screen">
+                <button class="btn-white" onclick="showLogin()" type="button">Entrar</button>
+            </div>
+
+            <div id="screen-login" class="screen hidden">
+                <div class="input-group">
+                    <label for="cpf">CPF</label>
+                    <input type="tel" id="cpf" maxlength="14" placeholder="000.000.000-00" autocomplete="off">
+                </div>
+
+                <div class="input-group" id="input-container-senha">
+                    <label for="senha">Senha</label>
+                    <div class="input-wrapper">
+                        <input type="password" id="senha" placeholder="Digite sua senha">
+                        <div class="eye-icon" onclick="togglePassword()">
+                            <svg id="eye-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="login-error-msg" style="color: #ff4d4d; font-size: 0.9rem; text-align: right; margin-top: 5px; font-weight: 600; display: none; text-shadow: 0 1px 2px rgba(0,0,0,0.5);"></div>
+
+                <div class="options-row">
+                    <div class="toggle-wrapper">
+                        <span class="remember-label-text">Lembrar-me</span>
+                        <label class="switch">
+                            <input type="checkbox" id="lembrar" onchange="toggleRemember()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <button class="btn-glass" type="button" id="btn-login" disabled onclick="submitLogin()">Entrar</button>
+                <div class="forgot-pass">Esqueci minha senha</div>
+            </div>
+
+            <div id="screen-welcome" class="white-bg-screen hidden" style="background: linear-gradient(180deg, #1e1c58 0%, #12103c 100%); color:white;">
+                 <div class="logo-container" style="margin-bottom: 50px;">
+                    <img src="logo.png" alt="Logo Fundação Banrisul">
+                </div>
+                <h1 style="font-size: 2.5rem;">Boas-vindas!</h1>
+                <p style="margin-top: 20px; font-size: 1.1rem; opacity: 0.8;">Acesso realizado com sucesso.</p>
+            </div>
+
+            <div id="screen-voice-success" class="white-bg-screen hidden">
+                <div class="header-white">
+                    <img src="logo2.png" alt="Logo Azul" class="logo-white">
+                </div>
+                
+                <div class="success-content">
+                    <div class="success-image-placeholder">
+                        <img src="/voz-confirmada.png" alt="Microfone 3D" style="width: 100%; height: auto;">
+                    </div>
+
+                    <h2 class="success-title">Senha por voz criada</h2>
+                    <p class="success-subtitle">Sua senha por voz foi<br>criada com sucesso.</p>
+
+                    <button class="btn-teal" onclick="finishOnboarding()">Ir para o Aplicativo</button>
+                </div>
+            </div>
+
+            <div id="screen-onboarding" class="white-bg-screen hidden">
+                <div class="header-white">
+                    <img src="logo2.png" alt="Logo Azul" class="logo-white">
+                </div>
+                <div class="back-btn-container">
+                    <button class="btn-back" onclick="goBackToLogin()">
+                        <svg class="arrow-icon-back" width="14" height="22" viewBox="0 0 14 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M11.5 2L2.5 11L11.5 20" stroke="#0B0C2B" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Voltar
+                    </button>
+                </div>
+                <div class="title-onboarding">
+                    Gostaria de entrar no<br>
+                    APP <span class="highlight-purple">sem burocracia</span><br>
+                    de senha?
+                </div>
+                <button class="btn-dark-blue" onclick="goToChoice()">Sim</button>
+                <button class="btn-light-gray" onclick="fakeLoginSuccess()">Não</button>
+                <label class="checkbox-container">
+                    <input type="checkbox">
+                    <span class="checkmark"></span>
+                    Não perguntar novamente
+                </label>
+                <div class="footer-link">DEIXE PARA MAIS TARDE</div>
+            </div>
+
+            <div id="screen-choice" class="white-bg-screen hidden">
+                <div class="header-white">
+                    <img src="logo2.png" alt="Logo Azul" class="logo-white">
+                </div>
+                <div class="back-btn-container">
+                    <button class="btn-back" onclick="goBackToOnboardingFromChoice()">
+                        <svg class="arrow-icon-back" width="14" height="22" viewBox="0 0 14 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M11.5 2L2.5 11L11.5 20" stroke="#0B0C2B" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Voltar
+                    </button>
+                </div>
+                <div class="title-onboarding">
+                    Escolha a forma que<br>
+                    deseja <span class="highlight-purple">entrar no APP</span>
+                </div>
+                <button class="btn-dark-blue" onclick="goToFaceBiometry()">Biometria Facial</button>
+                <button class="btn-dark-blue" disabled>Biometria Impressão Digital</button>
+                <button class="btn-dark-blue" onclick="goToVoiceRecord()">Senha por voz</button>
+                
+                <div class="footer-link">DEIXE PARA MAIS TARDE</div>
+            </div>
+
+            <div id="screen-face-biometry" class="white-bg-screen hidden">
+                <div class="back-btn-container" style="margin-top: 20px; justify-content: center; margin-bottom: 2rem;">
+                    <button class="btn-back" onclick="goBackFromFaceBiometry()">
+                        <svg class="arrow-icon-back" width="14" height="22" viewBox="0 0 14 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M11.5 2L2.5 11L11.5 20" stroke="#0B0C2B" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Voltar
+                    </button>
+                </div>
+
+                <div style="text-align: center; width: 100%;">
+                    <div class="biometry-title-box">Orientações</div>
+                </div>
+
+                <div style="width: 100%; padding: 0 1rem; flex-grow: 1; display: flex; flex-direction: column; justify-content: center;">
+                    
+                    <div class="instruction-item">
+                        <div class="icon-space">
+                            <img src="/centralize.png" alt="Ícone Centralize Rosto">
+                        </div>
+                        <div class="instruction-text">Centralize o seu rosto<br>dentro do espaço.</div>
+                    </div>
+
+                    <div class="instruction-item">
+                        <div class="icon-space">
+                            <img src="/circulo-verde.png" alt="Ícone Câmera Verde">
+                        </div>
+                        <div class="instruction-text">Quando o circulo sinalizar em<br>verde você pode tirar a foto</div>
+                    </div>
+
+                    <div class="instruction-item">
+                        <div class="icon-space">
+                            <img src="/iluminado.png" alt="Ícone Iluminação">
+                        </div>
+                        <div class="instruction-text">Escolha um lugar bem iluminado.</div>
+                    </div>
+
+                    <div class="instruction-item">
+                        <div class="icon-space">
+                            <img src="/fundo-neutro.png" alt="Ícone Fundo Neutro">
+                        </div>
+                        <div class="instruction-text">Se posicione onde o fundo seja<br>neutro e com poucas informações</div>
+                    </div>
+
+                </div>
+
+                <button class="btn-dark-blue" style="margin-top: auto;" onclick="startFaceCamera()">Realizar a Biometria</button>
+            </div>
+
+            <div id="screen-face-camera" class="white-bg-screen hidden">
+                 <div class="back-btn-container" style="margin-top: 20px; justify-content: center; margin-bottom: 1rem;">
+                    <button class="btn-back" onclick="closeFaceCamera()">
+                        <svg class="arrow-icon-back" width="14" height="22" viewBox="0 0 14 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M11.5 2L2.5 11L11.5 20" stroke="#0B0C2B" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Voltar
+                    </button>
+                </div>
+
+                <div class="camera-wrapper">
+                    <div id="camera-frame" class="video-mask border-red">
+                        <video id="camera-feed" autoplay playsinline muted></video>
+                        <div class="scan-overlay"></div>
+                    </div>
+                </div>
+                
+                <div style="width: 100%; padding-bottom: 2rem;">
+                    <button class="btn-purple-light" onclick="toggleCameraFacingMode()">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                             <path d="M20 4h-3.17L15 2H9L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-5 11.5V13H9v2.5L5.5 12 9 8.5V11h6V8.5l3.5 3.5-3.5 3.5z" fill="white"/>
+                        </svg>
+                        Inverter câmera
+                    </button>
+                    
+                    <button id="btn-take-photo" class="btn-dark-blue" onclick="capturePhoto()" disabled>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" fill="white"/>
+                            <circle cx="12" cy="12" r="5" fill="white"/>
+                        </svg>
+                        Tirar foto
+                    </button>
+                </div>
+            </div>
+            
+            <div id="screen-face-verification" class="white-bg-screen hidden">
+                <div style="text-align: center; width: 100%; margin-top: 50px;">
+                    <div class="biometry-title-box" style="margin-top:0;">Verificação Facial</div>
+                </div>
+
+                <div class="camera-wrapper">
+                    <div id="camera-frame-verify" class="video-mask border-processing">
+                        <video id="camera-feed-verify" autoplay playsinline muted></video>
+                        <div class="scan-overlay"></div>
+                    </div>
+                    <p id="verify-status-text" style="margin-top: 20px; color: #0b0c2b; opacity: 0.8;">Posicione o rosto...</p>
+                </div>
+            </div>
+
+            <div id="screen-voice-record" class="white-bg-screen hidden">
+                <div class="header-white">
+                    <img src="logo2.png" alt="Logo Azul" class="logo-white">
+                </div>
+                <div class="back-btn-container">
+                    <button class="btn-back" onclick="goBackToChoice()">
+                        <svg class="arrow-icon-back" width="14" height="22" viewBox="0 0 14 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M11.5 2L2.5 11L11.5 20" stroke="#0B0C2B" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Voltar
+                    </button>
+                </div>
+                <div class="title-onboarding">
+                    Grave uma frase de até<br>
+                    <span class="highlight-purple">3 segundos</span> que você irá<br>
+                    se lembrar depois.
+                </div>
+                <button id="btn-gravar" class="btn-dark-blue" onclick="startRecording()">
+                    <svg id="mic-icon" width="20" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 14C13.66 14 15 12.66 15 11V5C15 3.34 13.66 2 12 2C10.34 2 9 3.34 9 5V11C9 12.66 10.34 14 12 14Z" fill="white"/>
+                        <path d="M19 11C19 14.53 16.39 17.44 13 17.93V21H11V17.93C7.61 17.44 5 14.53 5 11H7C7 13.76 9.24 16 12 16C14.76 16 17 13.76 17 11H19Z" fill="white"/>
+                    </svg>
+                    <span id="txt-gravar">Gravar</span>
+                </button>
+                <div class="footer-link">DEIXE PARA MAIS TARDE</div>
+            </div>
+
+            <div id="screen-voice-result" class="white-bg-screen hidden">
+                <div class="header-white">
+                    <img src="logo2.png" alt="Logo Azul" class="logo-white">
+                </div>
+                <div class="back-btn-container">
+                    <button class="btn-back" onclick="goBackToRecord()">
+                        <svg class="arrow-icon-back" width="14" height="22" viewBox="0 0 14 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M11.5 2L2.5 11L11.5 20" stroke="#0B0C2B" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Voltar
+                    </button>
+                </div>
+                <div class="title-onboarding" style="margin-bottom: 2rem;">
+                    Confira o áudio<br>
+                    <span class="highlight-purple">gravado.</span>
+                </div>
+                <div class="transcription-card">
+                    <div class="transcription-label">Transcrição</div>
+                    <div class="transcription-text" id="text-result">"Aguardando processamento..."</div>
+                </div>
+                <div class="player-container">
+                    <div class="play-btn-circle" id="btn-play-pause">
+                        <svg id="icon-play" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M8 5V19L19 12L8 5Z" fill="white"/>
+                        </svg>
+                        <svg id="icon-pause" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:none;">
+                            <path d="M6 19H10V5H6V19ZM14 5V19H18V5H14Z" fill="white"/>
+                        </svg>
+                    </div>
+                    <div class="audio-waveform">
+                        <div class="audio-progress" id="audio-progress-bar"></div>
+                    </div>
+                    <div class="audio-time" id="audio-time-display">00:00</div>
+                </div>
+                <button class="btn-dark-blue" onclick="confirmVoiceRegistration()">Confirmar Áudio</button>
+                <button class="btn-light-gray" onclick="goBackToRecord()">Gravar Novamente</button>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- SELEÇÃO DE ELEMENTOS ---
+        const initialScreen = document.getElementById('screen-initial');
+        const loginScreen = document.getElementById('screen-login');
+        const onboardingScreen = document.getElementById('screen-onboarding');
+        const choiceScreen = document.getElementById('screen-choice');
+        const voiceScreen = document.getElementById('screen-voice-record');
+        const resultScreen = document.getElementById('screen-voice-result');
+        const successScreen = document.getElementById('screen-voice-success');
+        const secondAccessScreen = document.getElementById('screen-second-access');
+        const welcomeScreen = document.getElementById('screen-welcome');
+        
+        // Seleção das telas de biometria
+        const faceBiometryScreen = document.getElementById('screen-face-biometry');
+        const faceCameraScreen = document.getElementById('screen-face-camera'); 
+        const faceVerificationScreen = document.getElementById('screen-face-verification'); 
+        
+        const mainText = document.querySelector('.main-text');
+        const cpfInput = document.getElementById('cpf');
+        const senhaInput = document.getElementById('senha');
+        const senhaContainer = document.getElementById('input-container-senha');
+        const loginBtn = document.getElementById('btn-login');
+        const rememberCheckbox = document.getElementById('lembrar');
+        
+        const btnGravar = document.getElementById('btn-gravar');
+        const txtGravar = document.getElementById('txt-gravar');
+        const textResult = document.getElementById('text-result');
+        const audioPlayback = document.getElementById('audio-playback');
+        const btnPlayPause = document.getElementById('btn-play-pause');
+        const iconPlay = document.getElementById('icon-play');
+        const iconPause = document.getElementById('icon-pause');
+        const progressBar = document.getElementById('audio-progress-bar');
+        const timeDisplay = document.getElementById('audio-time-display');
+
+        // --- VARIÁVEIS GLOBAIS ---
+        let mediaRecorder;
+        let audioChunks = [];
+        let recognition;
+        let isRecording = false;
+        let registeredPhrase = ""; 
+        
+        // Variáveis da Câmera e IA
+        let cameraStream = null;
+        let cameraFacingMode = 'user'; 
+        let faceDetectionInterval = null;
+        let modelsLoaded = false;
+
+        // --- FUNÇÃO AUXILIAR: CONVERSÃO DE NÚMEROS ---
+        function textToNumbers(text) {
+            const map = {
+                'zero': '0', 'um': '1', 'uma': '1', 'dois': '2', 'duas': '2', 'três': '3', 
+                'quatro': '4', 'cinco': '5', 'seis': '6', 'sete': '7', 'oito': '8', 
+                'nove': '9', 'dez': '10'
+            };
+            let lowerText = text.toLowerCase();
+            for (let word in map) {
+                let regex = new RegExp(`\\b${word}\\b`, 'gi');
+                lowerText = lowerText.replace(regex, map[word]);
+            }
+            return lowerText;
+        }
+
+        // --- INICIALIZAÇÃO ---
+        window.onload = async function() {
+            checkStorage();
+            await loadFaceAPIModels(); // Carregar modelos ao iniciar
+        }
+
+        // Carrega os modelos do FaceAPI
+        async function loadFaceAPIModels() {
+            try {
+                // Carrega do repositório oficial (pode ser lento na 1ª vez)
+                const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
+                await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
+                await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+                await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+                modelsLoaded = true;
+                console.log("Modelos de IA carregados com sucesso.");
+            } catch (err) {
+                console.error("Erro ao carregar modelos:", err);
+                alert("Erro ao carregar IA de reconhecimento facial. Verifique sua conexão.");
+            }
+        }
+
+        function checkStorage() {
+            const shouldRemember = localStorage.getItem('remember_me');
+            const savedCPF = localStorage.getItem('saved_cpf');
+
+            if (shouldRemember === 'true' && savedCPF) {
+                cpfInput.value = savedCPF;
+                rememberCheckbox.checked = true;
+                senhaContainer.style.display = 'none';
+                showLogin();
+                loginBtn.disabled = false;
+            } else {
+                senhaContainer.style.display = 'flex';
+                loginBtn.disabled = true;
+            }
+        }
+
+        function toggleRemember() {
+            if (rememberCheckbox.checked) {
+                localStorage.setItem('remember_me', 'true');
+                if (cpfInput.value) {
+                    localStorage.setItem('saved_cpf', cpfInput.value);
+                }
+            } else {
+                localStorage.removeItem('remember_me');
+                localStorage.removeItem('saved_cpf');
+                localStorage.removeItem('saved_pass');
+                senhaContainer.style.display = 'flex';
+                validateLogin();
+            }
+        }
+
+        // --- NAVEGAÇÃO ---
+        function showLogin() {
+            initialScreen.style.opacity = '0';
+            setTimeout(() => {
+                initialScreen.classList.add('hidden');
+                mainText.style.marginBottom = "1.5rem"; 
+                loginScreen.classList.remove('hidden');
+                loginScreen.classList.add('animate-up');
+                if(!cpfInput.value) cpfInput.focus();
+            }, 300);
+        }
+
+        function submitLogin() {
+            const cpfVal = cpfInput.value;
+            const cleanCpf = cpfVal.replace(/\D/g, "");
+            const senhaVal = senhaInput.value;
+
+            if (senhaContainer.style.display !== 'none') {
+                if (senhaVal.length > 0) {
+                    // Verifica se tem biometria facial registrada
+                    const faceDescriptor = localStorage.getItem('face_descriptor_' + cleanCpf);
+                    if (faceDescriptor) {
+                         loginScreen.classList.add('login-fade-out');
+                         startFaceVerification();
+                         return;
+                    }
+
+                    const voiceRegistered = localStorage.getItem('voice_reg_' + cleanCpf);
+                    const officialPassword = localStorage.getItem('voice_phrase_' + cleanCpf);
+
+                    if (!voiceRegistered) {
+                        loginScreen.classList.add('login-fade-out');
+                        loginScreen.classList.remove('login-fade-in');
+                        onboardingScreen.classList.remove('hidden');
+                        setTimeout(() => { onboardingScreen.classList.add('screen-visible'); }, 10);
+                    } else if (officialPassword && senhaVal.toLowerCase().trim() === officialPassword.trim()) {
+                        proceedToWelcome(cpfVal);
+                    } else {
+                        const errDiv = document.getElementById('login-error-msg');
+                        errDiv.innerText = 'Senha incorreta. Tente novamente.';
+                        errDiv.style.display = 'block';
+                    }
+                } else {
+                    alert("Digite a senha.");
+                }
+                return; 
+            }
+
+            // FLUXO SEM SENHA (só CPF preenchido)
+            // Verificar Biometria Facial
+            const faceDescriptor = localStorage.getItem('face_descriptor_' + cleanCpf);
+            if (faceDescriptor) {
+                loginScreen.classList.add('login-fade-out');
+                startFaceVerification();
+                return;
+            }
+
+            // Verificar Biometria de Voz
+            const voiceRegistered = localStorage.getItem('voice_reg_' + cleanCpf);
+            if (!voiceRegistered) {
+                loginScreen.classList.add('login-fade-out');
+                onboardingScreen.classList.remove('hidden');
+                setTimeout(() => { onboardingScreen.classList.add('screen-visible'); }, 10);
+            } else {
+                loginScreen.classList.add('login-fade-out');
+                secondAccessScreen.classList.remove('hidden');
+                secondAccessScreen.style.display = 'flex'; 
+            }
+        }
+
+        function proceedToWelcome(cpfVal) {
+            if (rememberCheckbox.checked) {
+                localStorage.setItem('remember_me', 'true');
+                localStorage.setItem('saved_cpf', cpfVal);
+            }
+            
+            // Garantir que telas intermediárias fechem
+            faceVerificationScreen.classList.remove('screen-visible');
+            setTimeout(() => { faceVerificationScreen.classList.add('hidden'); }, 300);
+            
+            loginScreen.classList.add('login-fade-out');
+            setTimeout(() => {
+                    welcomeScreen.classList.remove('hidden');
+                    welcomeScreen.classList.add('screen-visible');
+            }, 300);
+        }
+        
+        function fakeLoginSuccess() {
+             welcomeScreen.classList.remove('hidden');
+             welcomeScreen.classList.add('screen-visible');
+        }
+
+        function goBackToLogin() {
+            onboardingScreen.classList.remove('screen-visible');
+            loginScreen.classList.remove('login-fade-out');
+            loginScreen.classList.add('login-fade-in');
+            setTimeout(() => { onboardingScreen.classList.add('hidden'); }, 500);
+        }
+
+        // Fluxo das Telas de Onboarding
+        function goToChoice() {
+            choiceScreen.classList.remove('hidden');
+            setTimeout(() => { choiceScreen.classList.add('screen-visible'); }, 10);
+        }
+
+        function goBackToOnboardingFromChoice() {
+            choiceScreen.classList.remove('screen-visible');
+            setTimeout(() => { choiceScreen.classList.add('hidden'); }, 500);
+        }
+
+        function goToVoiceRecord() {
+            voiceScreen.classList.remove('hidden');
+            setTimeout(() => { voiceScreen.classList.add('screen-visible'); }, 10);
+        }
+
+        function goBackToChoice() {
+            voiceScreen.classList.remove('screen-visible');
+            setTimeout(() => { voiceScreen.classList.add('hidden'); }, 500);
+        }
+
+        // --- NAVEGAÇÃO DA BIOMETRIA FACIAL ---
+        function goToFaceBiometry() {
+            if (!modelsLoaded) {
+                alert("Aguarde, carregando inteligência artificial...");
+                return;
+            }
+            faceBiometryScreen.classList.remove('hidden');
+            setTimeout(() => { faceBiometryScreen.classList.add('screen-visible'); }, 10);
+        }
+
+        function goBackFromFaceBiometry() {
+            faceBiometryScreen.classList.remove('screen-visible');
+            setTimeout(() => { faceBiometryScreen.classList.add('hidden'); }, 500);
+        }
+
+        // --- LÓGICA DA CÂMERA DE BIOMETRIA (CADASTRO) ---
+        function startFaceCamera() {
+            faceBiometryScreen.classList.remove('screen-visible');
+            setTimeout(() => { faceBiometryScreen.classList.add('hidden'); }, 500);
+            
+            faceCameraScreen.classList.remove('hidden');
+            setTimeout(() => { faceCameraScreen.classList.add('screen-visible'); }, 10);
+            
+            initCamera('camera-feed');
+        }
+
+        function closeFaceCamera() {
+            stopCamera();
+            faceCameraScreen.classList.remove('screen-visible');
+            setTimeout(() => { faceCameraScreen.classList.add('hidden'); }, 500);
+            
+            // Volta para a tela de escolha
+            choiceScreen.classList.remove('hidden');
+            setTimeout(() => { choiceScreen.classList.add('screen-visible'); }, 10);
+        }
+
+        // --- LÓGICA DE VERIFICAÇÃO FACIAL (LOGIN REAL) ---
+        function startFaceVerification() {
+            if (!modelsLoaded) {
+                alert("Aguarde, carregando inteligência artificial...");
+                return;
+            }
+            // Mostra tela de verificação
+            faceVerificationScreen.classList.remove('hidden');
+            setTimeout(() => { faceVerificationScreen.classList.add('screen-visible'); }, 10);
+            
+            initCamera('camera-feed-verify');
+            performRealVerification();
+        }
+
+        async function performRealVerification() {
+            const video = document.getElementById('camera-feed-verify');
+            const frame = document.getElementById('camera-frame-verify');
+            const statusText = document.getElementById('verify-status-text');
+            const currentCpf = cpfInput.value.replace(/\D/g, "");
+            
+            // Recupera o descritor salvo (array puro)
+            const savedDescriptorJson = localStorage.getItem('face_descriptor_' + currentCpf);
+            
+            if (!savedDescriptorJson) {
+                alert("Erro: Biometria não encontrada para este CPF.");
+                stopCamera();
+                return;
+            }
+
+            // Converte de volta para Float32Array para a lib poder comparar
+            const savedDescriptor = new Float32Array(Object.values(JSON.parse(savedDescriptorJson)));
+            
+            let attempts = 0;
+            const maxAttempts = 50; // Tenta por aprox. 5-10 segundos
+
+            const verifyInterval = setInterval(async () => {
+                attempts++;
+                if (attempts > maxAttempts) {
+                    clearInterval(verifyInterval);
+                    statusText.innerText = "Não reconhecido. Tente novamente.";
+                    frame.classList.remove('border-processing');
+                    frame.classList.add('border-red');
+                    setTimeout(() => {
+                         stopCamera();
+                         // Voltar para login
+                         faceVerificationScreen.classList.remove('screen-visible');
+                         setTimeout(() => { faceVerificationScreen.classList.add('hidden'); }, 300);
+                         loginScreen.classList.remove('login-fade-out');
+                    }, 2000);
+                    return;
+                }
+
+                // Detecta rosto atual
+                const detection = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
+
+                if (detection) {
+                    // Compara distância Euclidiana
+                    const distance = faceapi.euclideanDistance(savedDescriptor, detection.descriptor);
+                    
+                    // Distância menor que 0.5 geralmente é a mesma pessoa
+                    if (distance < 0.5) {
+                        clearInterval(verifyInterval);
+                        statusText.innerText = "Identidade Confirmada!";
+                        frame.classList.remove('border-processing');
+                        frame.classList.add('border-green');
+                        
+                        setTimeout(() => {
+                            stopCamera();
+                            proceedToWelcome(cpfInput.value);
+                        }, 1000);
+                    }
+                }
+            }, 200);
+        }
+
+        // --- FUNÇÕES GERAIS DE CÂMERA ---
+        function initCamera(videoId = 'camera-feed') {
+            const video = document.getElementById(videoId);
+            const constraints = {
+                video: { facingMode: cameraFacingMode }
+            };
+
+            // Resetar estados se for cadastro
+            if(videoId === 'camera-feed') resetFaceDetectionState();
+
+            navigator.mediaDevices.getUserMedia(constraints)
+                .then(stream => {
+                    cameraStream = stream;
+                    video.srcObject = stream;
+                    // Se for cadastro, inicia a detecção para habilitar o botão
+                    if(videoId === 'camera-feed') startFaceDetectionLoopForCapture();
+                })
+                .catch(err => {
+                    alert("Erro ao acessar a câmera: " + err);
+                });
+        }
+
+        function stopCamera() {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+            }
+            if (faceDetectionInterval) clearInterval(faceDetectionInterval);
+        }
+
+        function toggleCameraFacingMode() {
+            cameraFacingMode = (cameraFacingMode === 'user') ? 'environment' : 'user';
+            stopCamera();
+            // Verifica qual tela está ativa para reiniciar a câmera correta
+            if (faceCameraScreen.classList.contains('screen-visible')) {
+                initCamera('camera-feed');
+            }
+        }
+
+        // Loop de detecção apenas para validar se existe UM rosto na tela (CADASTRO)
+        function startFaceDetectionLoopForCapture() {
+            const video = document.getElementById('camera-feed');
+            const frame = document.getElementById('camera-frame');
+            const btnPhoto = document.getElementById('btn-take-photo');
+
+            resetFaceDetectionState();
+
+            faceDetectionInterval = setInterval(async () => {
+                if(video.paused || video.ended || !modelsLoaded) return;
+
+                const detection = await faceapi.detectSingleFace(video);
+                
+                if (detection) {
+                    if(frame) {
+                        frame.classList.remove('border-red');
+                        frame.classList.add('border-green');
+                    }
+                    if(btnPhoto) btnPhoto.disabled = false;
+                } else {
+                    if(frame) {
+                        frame.classList.remove('border-green');
+                        frame.classList.add('border-red');
+                    }
+                    if(btnPhoto) btnPhoto.disabled = true;
+                }
+            }, 500);
+        }
+
+        function resetFaceDetectionState() {
+             const frame = document.getElementById('camera-frame');
+             const btnPhoto = document.getElementById('btn-take-photo');
+             if(frame) {
+                 frame.classList.remove('border-green');
+                 frame.classList.add('border-red');
+             }
+             if(btnPhoto) btnPhoto.disabled = true;
+        }
+
+        // CAPTURA E SALVA O DESCRITOR REAL
+        async function capturePhoto() {
+            const video = document.getElementById('camera-feed');
+            
+            // Pausa detecção para processar
+            if (faceDetectionInterval) clearInterval(faceDetectionInterval);
+
+            // Tenta obter o descritor final com alta precisão
+            const detection = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
+
+            if (!detection) {
+                alert("Rosto não detectado no momento da captura. Tente novamente.");
+                startFaceDetectionLoopForCapture(); // Reinicia
+                return;
+            }
+
+            stopCamera();
+            
+            // SALVA O ARRAY DE NÚMEROS (DESCRITOR) NO LOCALSTORAGE
+            const currentCpf = cpfInput.value.replace(/\D/g, "");
+            
+            // Precisamos converter o Float32Array para array normal para salvar em JSON
+            const descriptorArray = Object.values(detection.descriptor);
+            localStorage.setItem('face_descriptor_' + currentCpf, JSON.stringify(descriptorArray));
+            
+            // Marca flag simples de existência
+            localStorage.setItem('face_reg_' + currentCpf, 'true');
+
+            // Fluxo de sucesso visual
+            faceCameraScreen.classList.remove('screen-visible');
+            setTimeout(() => { faceCameraScreen.classList.add('hidden'); }, 500);
+            
+            successScreen.querySelector('.success-title').innerText = "Biometria realizada";
+            successScreen.querySelector('.success-subtitle').innerText = "Seu rosto foi cadastrado com sucesso.";
+            
+            const successImg = successScreen.querySelector('.success-image-placeholder img');
+            successImg.src = "CAMINHO_DA_SUA_IMAGEM_AQUI.png"; 
+
+            successScreen.classList.remove('hidden');
+            setTimeout(() => { successScreen.classList.add('screen-visible'); }, 10);
+        }
+        // --------------------------------------------------------
+
+        function goBackToRecord() {
+            audioPlayback.pause();
+            audioPlayback.currentTime = 0;
+            resetPlayerUI();
+            resultScreen.classList.remove('screen-visible');
+            setTimeout(() => { resultScreen.classList.add('hidden'); }, 500);
+        }
+
+        function finishOnboarding() {
+            successScreen.classList.remove('screen-visible');
+            successScreen.classList.add('hidden');
+            welcomeScreen.classList.remove('hidden');
+            setTimeout(() => { welcomeScreen.classList.add('screen-visible'); }, 10);
+        }
+
+        function switchToTypePassword() {
+            secondAccessScreen.classList.add('hidden');
+            loginScreen.classList.remove('login-fade-out');
+            loginScreen.classList.add('login-fade-in');
+            senhaContainer.style.display = 'flex';
+            senhaInput.value = ''; 
+            senhaInput.focus();
+            validateLogin();
+        }
+
+        // --- LÓGICA DE GRAVAÇÃO ---
+        function startRecording() {
+            if (isRecording) return;
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                alert("Navegador sem suporte ao microfone.");
+                return;
+            }
+
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    isRecording = true;
+                    btnGravar.classList.add('recording');
+                    txtGravar.innerText = "Gravando...";
+                    
+                    mediaRecorder = new MediaRecorder(stream);
+                    audioChunks = [];
+                    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                    
+                    mediaRecorder.onstop = () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        audioPlayback.src = URL.createObjectURL(audioBlob);
+                    };
+
+                    mediaRecorder.start();
+
+                    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                    if (SpeechRecognition) {
+                        recognition = new SpeechRecognition();
+                        recognition.lang = 'pt-BR';
+                        recognition.onresult = (event) => {
+                            let transcript = event.results[0][0].transcript;
+                            transcript = textToNumbers(transcript);
+                            transcript = transcript.replace(/\s+/g, '');
+                            textResult.innerText = `"${transcript}"`;
+                            registeredPhrase = transcript; 
+                        };
+                        recognition.start();
+                    }
+
+                    setTimeout(() => { stopRecordingAndShowResult(); }, 3500);
+                })
+                .catch(err => alert("Permissão de microfone negada."));
+        }
+
+        function stopRecordingAndShowResult() {
+            if (!isRecording) return;
+            isRecording = false;
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+            if (recognition) recognition.stop();
+            btnGravar.classList.remove('recording');
+            txtGravar.innerText = "Gravar";
+            resultScreen.classList.remove('hidden');
+            setTimeout(() => { resultScreen.classList.add('screen-visible'); }, 10);
+        }
+
+        function confirmVoiceRegistration() {
+            const currentCpf = cpfInput.value.replace(/\D/g, "");
+            if (currentCpf && registeredPhrase) {
+                localStorage.setItem('voice_reg_' + currentCpf, 'true');
+                localStorage.setItem('voice_phrase_' + currentCpf, registeredPhrase.toLowerCase());
+                
+                resultScreen.classList.remove('screen-visible');
+                resultScreen.classList.add('hidden');
+                
+                // Restaura textos originais da tela de sucesso para Voz
+                successScreen.querySelector('.success-title').innerText = "Senha por voz criada";
+                successScreen.querySelector('.success-subtitle').innerHTML = "Sua senha por voz foi<br>criada com sucesso.";
+                
+                // Restaura a imagem original de voz (caso o usuário volte)
+                const successImg = successScreen.querySelector('.success-image-placeholder img');
+                successImg.src = "/voz-confirmada.png";
+
+                successScreen.classList.remove('hidden');
+                setTimeout(() => { successScreen.classList.add('screen-visible'); }, 10);
+            }
+        }
+
+        // --- LÓGICA DE AUTENTICAÇÃO ---
+        function startAuthRecording() {
+            const btnMic = document.getElementById('btn-mic-auth');
+            const errorMsg = document.getElementById('voice-error-msg');
+            const currentCpf = cpfInput.value.replace(/\D/g, "");
+            const savedPhrase = localStorage.getItem('voice_phrase_' + currentCpf);
+
+            errorMsg.innerText = "";
+            btnMic.classList.add('listening');
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (SpeechRecognition) {
+                const authRecognition = new SpeechRecognition();
+                authRecognition.lang = 'pt-BR';
+                authRecognition.onresult = (event) => {
+                    btnMic.classList.remove('listening');
+                    let spokenPhrase = event.results[0][0].transcript.toLowerCase();
+                    spokenPhrase = textToNumbers(spokenPhrase).replace(/\s+/g, '');
+                    
+                    if (savedPhrase && (spokenPhrase.includes(savedPhrase) || savedPhrase.includes(spokenPhrase))) {
+                        secondAccessScreen.classList.add('hidden');
+                        welcomeScreen.classList.remove('hidden');
+                        welcomeScreen.classList.add('screen-visible');
+                    } else {
+                        errorMsg.innerText = "Senha incorreta, tente novamente.";
+                    }
+                };
+                authRecognition.onerror = () => {
+                    btnMic.classList.remove('listening');
+                    errorMsg.innerText = "Não entendi. Tente novamente.";
+                };
+                authRecognition.start();
+            }
+        }
+
+        // --- UTILS ---
+        audioPlayback.ontimeupdate = () => {
+            if(audioPlayback.duration) {
+                const percent = (audioPlayback.currentTime / audioPlayback.duration) * 100;
+                progressBar.style.width = `${percent}%`;
+                const s = Math.floor(audioPlayback.currentTime % 60);
+                const m = Math.floor(audioPlayback.currentTime / 60);
+                timeDisplay.innerText = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+            }
+        };
+
+        function resetPlayerUI() {
+            iconPlay.style.display = 'block';
+            iconPause.style.display = 'none';
+            progressBar.style.width = '0%';
+            timeDisplay.innerText = "00:00";
+        }
+
+        btnPlayPause.addEventListener('click', () => {
+            if (audioPlayback.paused) { audioPlayback.play(); iconPlay.style.display = 'none'; iconPause.style.display = 'block'; }
+            else { audioPlayback.pause(); iconPlay.style.display = 'block'; iconPause.style.display = 'none'; }
+        });
+
+        function togglePassword() {
+            const eyeSvg = document.getElementById('eye-svg');
+            const pathVisible = '<path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>';
+            const pathHidden = '<path d="M11.83 9L15 12.17V12c0-1.66-1.34-3-3-3h-.17zm-4.3.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm-2.53 6.35L4.27 17C2.48 15.5 1.13 13.56 1 12c1.73-4.39 6-7.5 11-7.5 1.55 0 3.03.3 4.38.84l.42-.42L19.73 2 21 3.27 3.27 21 2 19.73l3-3.58zM12 7c1.1 0 2 .9 2 2 0 .37-.1.7-.28.98l-3.7-3.7C10.7 6.1 11.33 6 12 6z"/>';
+            if (senhaInput.type === 'password') { senhaInput.type = 'text'; eyeSvg.innerHTML = pathHidden; } 
+            else { senhaInput.type = 'password'; eyeSvg.innerHTML = pathVisible; }
+        }
+
+        function validateLogin() {
+            const isPasswordHidden = senhaContainer.style.display === 'none';
+            const cpfValid = cpfInput.value.length === 14;
+            const passValid = senhaInput.value.length > 0;
+            loginBtn.disabled = isPasswordHidden ? !cpfValid : !(cpfValid && passValid);
+        }
+
+        cpfInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, "");
+            if (value.length > 11) value = value.slice(0, 11);
+            value = value.replace(/(\d{3})(\d)/, "$1.$2");
+            value = value.replace(/(\d{3})(\d)/, "$1.$2");
+            value = value.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+            e.target.value = value;
+            if (rememberCheckbox.checked) localStorage.setItem('saved_cpf', e.target.value);
+            validateLogin();
+        });
+
+        senhaInput.addEventListener('input', function() {
+            validateLogin();
+            document.getElementById('login-error-msg').style.display = 'none';
+        });
+
+    </script>
+</body>
+</html>
